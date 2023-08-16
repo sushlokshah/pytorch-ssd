@@ -32,11 +32,12 @@ class SSD(nn.Module):
         if device:
             self.device = device
         else:
-            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.device = torch.device(
+                "cuda:0" if torch.cuda.is_available() else "cpu")
         if is_test:
             self.config = config
             self.priors = config.priors.to(self.device)
-            
+
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         confidences = []
         locations = []
@@ -86,7 +87,7 @@ class SSD(nn.Module):
 
         confidences = torch.cat(confidences, 1)
         locations = torch.cat(locations, 1)
-        
+
         if self.is_test:
             confidences = F.softmax(confidences, dim=2)
             boxes = box_utils.convert_locations_to_boxes(
@@ -95,6 +96,7 @@ class SSD(nn.Module):
             boxes = box_utils.center_form_to_corner_form(boxes)
             return confidences, boxes
         else:
+            # print("locations: ", locations.min(), locations.max())
             return confidences, locations
 
     def compute_header(self, i, x):
@@ -109,15 +111,18 @@ class SSD(nn.Module):
         return confidence, location
 
     def init_from_base_net(self, model):
-        self.base_net.load_state_dict(torch.load(model, map_location=lambda storage, loc: storage), strict=True)
+        self.base_net.load_state_dict(torch.load(
+            model, map_location=lambda storage, loc: storage), strict=True)
         self.source_layer_add_ons.apply(_xavier_init_)
         self.extras.apply(_xavier_init_)
         self.classification_headers.apply(_xavier_init_)
         self.regression_headers.apply(_xavier_init_)
 
     def init_from_pretrained_ssd(self, model):
-        state_dict = torch.load(model, map_location=lambda storage, loc: storage)
-        state_dict = {k: v for k, v in state_dict.items() if not (k.startswith("classification_headers") or k.startswith("regression_headers"))}
+        state_dict = torch.load(
+            model, map_location=lambda storage, loc: storage)
+        state_dict = {k: v for k, v in state_dict.items() if not (k.startswith(
+            "classification_headers") or k.startswith("regression_headers"))}
         model_dict = self.state_dict()
         model_dict.update(state_dict)
         self.load_state_dict(model_dict)
@@ -132,7 +137,8 @@ class SSD(nn.Module):
         self.regression_headers.apply(_xavier_init_)
 
     def load(self, model):
-        self.load_state_dict(torch.load(model, map_location=lambda storage, loc: storage))
+        self.load_state_dict(torch.load(
+            model, map_location=lambda storage, loc: storage))
 
     def save(self, model_path):
         torch.save(self.state_dict(), model_path)
@@ -141,7 +147,10 @@ class SSD(nn.Module):
 class MatchPrior(object):
     def __init__(self, center_form_priors, center_variance, size_variance, iou_threshold):
         self.center_form_priors = center_form_priors
-        self.corner_form_priors = box_utils.center_form_to_corner_form(center_form_priors)
+        # print("center_form_priors: ", center_form_priors)
+        self.corner_form_priors = box_utils.center_form_to_corner_form(
+            center_form_priors)
+        # print("corner_form_priors: ", self.corner_form_priors)
         self.center_variance = center_variance
         self.size_variance = size_variance
         self.iou_threshold = iou_threshold
@@ -151,10 +160,15 @@ class MatchPrior(object):
             gt_boxes = torch.from_numpy(gt_boxes)
         if type(gt_labels) is np.ndarray:
             gt_labels = torch.from_numpy(gt_labels)
+        # print(gt_boxes[0])
         boxes, labels = box_utils.assign_priors(gt_boxes, gt_labels,
                                                 self.corner_form_priors, self.iou_threshold)
+        # print(boxes[0])
         boxes = box_utils.corner_form_to_center_form(boxes)
-        locations = box_utils.convert_boxes_to_locations(boxes, self.center_form_priors, self.center_variance, self.size_variance)
+        # print('center_form: ', boxes[0])
+        locations = box_utils.convert_boxes_to_locations(
+            boxes, self.center_form_priors, self.center_variance, self.size_variance)
+        # print('locations: ', locations[0])
         return locations, labels
 
 

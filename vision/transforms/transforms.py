@@ -79,6 +79,8 @@ class SubtractMeans(object):
     def __call__(self, image, boxes=None, labels=None):
         image = image.astype(np.float32)
         image -= self.mean
+        # image = image/
+        # print(image.min(), image.max())
         return image.astype(np.float32), boxes, labels
 
 
@@ -96,6 +98,7 @@ class ToAbsoluteCoords(object):
 class ToPercentCoords(object):
     def __call__(self, image, boxes=None, labels=None):
         height, width, channels = image.shape
+        boxes = boxes.astype(np.float32)
         boxes[:, 0] /= width
         boxes[:, 2] /= width
         boxes[:, 1] /= height
@@ -110,7 +113,7 @@ class Resize(object):
 
     def __call__(self, image, boxes=None, labels=None):
         image = cv2.resize(image, (self.size,
-                                 self.size))
+                                   self.size))
         return image, boxes, labels
 
 
@@ -227,6 +230,7 @@ class RandomSampleCrop(object):
             boxes (Tensor): the adjusted bounding boxes in pt form
             labels (Tensor): the class labels for each bbox
     """
+
     def __init__(self):
         self.sample_options = (
             # using entire original input image
@@ -244,7 +248,10 @@ class RandomSampleCrop(object):
         height, width, _ = image.shape
         while True:
             # randomly choose a mode
-            mode = random.choice(self.sample_options)
+            # print("self.sample_options", self.sample_options)
+            mode = random.choice(
+                np.array(self.sample_options, dtype=object))
+            # print("mode", mode)
             if mode is None:
                 return image, boxes, labels
 
@@ -340,9 +347,15 @@ class Expand(object):
         image = expand_image
 
         boxes = boxes.copy()
-        boxes[:, :2] += (int(left), int(top))
-        boxes[:, 2:] += (int(left), int(top))
-
+        # print("boxes", boxes.shape)
+        # boxes[:, :2] += torch.from_numpy(np.array((int(left), int(top))))
+        # boxes[:, 2:] += torch.from_numpy(np.array((int(left), int(top))))
+        # print("old boxes", boxes)
+        # print('left', left)
+        # print('top', top)
+        boxes[:, :2] += np.array((int(left), int(top)))
+        boxes[:, 2:] += np.array((int(left), int(top)))
+        # print("new boxes", boxes)
         return image, boxes, labels
 
 
@@ -403,5 +416,6 @@ class PhotometricDistort(object):
         else:
             distort = Compose(self.pd[1:])
         im, boxes, labels = distort(im, boxes, labels)
+        # print(np.any(boxes.reshape(1, -1) == np.inf)
+        #       or np.any(boxes.reshape(1, -1) == -np.inf))
         return self.rand_light_noise(im, boxes, labels)
-

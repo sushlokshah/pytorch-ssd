@@ -2,6 +2,7 @@
 .idea
 log
 models
+run
 
 eval_results/
 

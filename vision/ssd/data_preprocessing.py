@@ -8,6 +8,7 @@ class TrainAugmentation:
             size: the size the of final image.
             mean: mean pixel value per channel.
         """
+        # print("TrainAugmentation.__init__")
         self.mean = mean
         self.size = size
         self.augment = Compose([
@@ -31,7 +32,10 @@ class TrainAugmentation:
             boxes: boundding boxes in the form of (x1, y1, x2, y2).
             labels: labels of boxes.
         """
-        return self.augment(img, boxes, labels)
+        img, boxes, labels = self.augment(img, boxes, labels)
+        # print(img.min(), img.max(), img.shape)
+        # print(type(img), type(boxes), type(labels))
+        return img, boxes, labels
 
 
 class TestTransform:

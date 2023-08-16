@@ -4,6 +4,7 @@ import cv2
 import pandas as pd
 import copy
 
+
 class OpenImagesDataset:
 
     def __init__(self, root,
@@ -25,7 +26,8 @@ class OpenImagesDataset:
 
     def _getitem(self, index):
         image_info = self.data[index]
-        image = self._read_image(image_info['image_id'])
+        # image = np.zeors((image_info['height'], image_info['width'], 3))
+        image = np.zeros((256, 256, 3))
         # duplicate boxes to prevent corruption of dataset
         boxes = copy.copy(image_info['boxes'])
         boxes[:, 0] *= image.shape[1]
@@ -34,6 +36,8 @@ class OpenImagesDataset:
         boxes[:, 3] *= image.shape[0]
         # duplicate labels to prevent corruption of dataset
         labels = copy.copy(image_info['labels'])
+        # print(boxes)
+        # print(labels)
         if self.transform:
             image, boxes, labels = self.transform(image, boxes, labels)
         if self.target_transform:
@@ -58,20 +62,33 @@ class OpenImagesDataset:
         return image
 
     def _read_data(self):
+        print("============ Reading OpenImages Dataset ============")
         annotation_file = f"{self.root}/sub-{self.dataset_type}-annotations-bbox.csv"
         annotations = pd.read_csv(annotation_file)
-        class_names = ['BACKGROUND'] + sorted(list(annotations['ClassName'].unique()))
-        class_dict = {class_name: i for i, class_name in enumerate(class_names)}
+        print("Number of images: {}".format(
+            len(annotations["ImageID"].unique())))
+        class_names = ['BACKGROUND'] + \
+            sorted(list(annotations['ClassName'].unique()))
+        class_dict = {class_name: i for i,
+                      class_name in enumerate(class_names)}
         data = []
         for image_id, group in annotations.groupby("ImageID"):
-            boxes = group.loc[:, ["XMin", "YMin", "XMax", "YMax"]].values.astype(np.float32)
+            boxes = group.loc[:, ["XMin", "YMin", "XMax",
+                                  "YMax"]].values.astype(np.float32)
             # make labels 64 bits to satisfy the cross_entropy function
-            labels = np.array([class_dict[name] for name in group["ClassName"]], dtype='int64')
+            labels = np.array([class_dict[name]
+                              for name in group["ClassName"]], dtype='int64')
             data.append({
                 'image_id': image_id,
                 'boxes': boxes,
                 'labels': labels
             })
+            # print('image_id', image_id)
+            # print('boxes', boxes)
+            # print('labels', labels)
+        print('data', len(data))
+        print('class_names', len(class_names))
+        print('data[0]', data[0])
         return data, class_names, class_dict
 
     def __len__(self):
@@ -115,8 +132,3 @@ class OpenImagesDataset:
             sample_image_indexes.update(sub)
         sample_data = [self.data[i] for i in sample_image_indexes]
         return sample_data
-
-
-
-
-
